@@ -7918,6 +7918,12 @@ var
             n2C := Str_ToInt(QuestActionInfo.sParam2, 0);
             PlayObject.SetQuestFlagStatus(n28, n2C);
           end;
+        nSC_CHANGEHUMABILITY:
+          PlayObject.ChangeScriptAbility(QuestActionInfo.nParam1, QuestActionInfo.nParam3);
+        nSC_DELAYGOTO:
+          PlayObject.ScheduleScriptDelay(Self, QuestActionInfo.sParam2,
+            QuestActionInfo.sParam3, QuestActionInfo.nParam1);
+        nSC_CLEARDELAYGOTO: PlayObject.ClearScriptDelay(QuestActionInfo.sParam1);
         nSC_REFSHOWNAME: PlayObject.RefShowName;
         nSC_TAKECOUNT:
           begin

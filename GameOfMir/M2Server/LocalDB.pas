@@ -2388,6 +2388,27 @@ var
       if not IsStringNumber(sParam1) then nCMDCode:=0;
       if not IsStringNumber(sParam2) then nCMDCode:=0;
     end;
+    if sCmd = 'CHANGEHUMABILITY' then begin
+      if not IsStringNumber(sParam1) or (Str_ToInt(sParam1, 0) < 1) or (Str_ToInt(sParam1, 0) > 10) or
+         (sParam2 <> '=') or not IsStringNumber(sParam3) or
+         (Str_ToInt(sParam3, -1) < 0) or (Str_ToInt(sParam3, -1) > High(Word)) or
+         (sParam4 <> '') then Exit;
+      nCMDCode := nSC_CHANGEHUMABILITY;
+      Goto L001;
+    end;
+    if sCmd = sSC_DELAYGOTO then begin
+      if not IsStringNumber(sParam1) or (Str_ToInt(sParam1, 0) <= 0) or
+         (Str_ToInt(sParam1, 0) > MaxInt div 1000) or
+         (Copy(sParam2, 1, 1) <> '@') or (Length(sParam2) < 2) or
+         (sParam4 <> '') then Exit;
+      nCMDCode := nSC_DELAYGOTO;
+      Goto L001;
+    end;
+    if sCmd = sSC_CLEARDELAYGOTO then begin
+      if (sParam1 = '') or (sParam2 <> '') then Exit;
+      nCMDCode := nSC_CLEARDELAYGOTO;
+      Goto L001;
+    end;
     if sCmd = 'REFSHOWNAME' then begin
       if sParam1 <> '' then Exit;
       nCMDCode := nSC_REFSHOWNAME;

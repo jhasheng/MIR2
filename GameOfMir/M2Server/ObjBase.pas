@@ -18,6 +18,13 @@ const
 type
   TBaseObject = class;
 
+  pTScriptDelay = ^TScriptDelay;
+  TScriptDelay = record
+    NPC: TBaseObject;
+    LabelName, TimerName: string;
+    StartTick, Delay: LongWord;
+  end;
+
   pTStartPoint = ^TStartPoint;
   TStartPoint = record
     sMapName: string[MapNameLen];
@@ -926,6 +933,13 @@ type
     function HorseRunTo(btDir: Byte; boFlag: Boolean): Boolean;
   public
     m_sScriptKilledMob: string;
+    m_ScriptAbility: array[1..10] of Integer;
+    m_ScriptDelays: TList;
+    procedure ApplyScriptAbility;
+    procedure ChangeScriptAbility(AbilityIndex, Value: Integer);
+    procedure ScheduleScriptDelay(NPC: TBaseObject; const LabelName, TimerName: string; DelaySeconds: Integer);
+    procedure ClearScriptDelay(const TimerName: string);
+    procedure ProcessScriptDelays;
     procedure RunKillMobScript(const MonsterName: string);
     constructor Create(); override;
     destructor Destroy; override;
@@ -3590,8 +3604,7 @@ begin
   end;
 {$IFEND}
 
-
-
+  if Self is TPlayObject then TPlayObject(Self).ApplyScriptAbility;
 end;
 
 procedure TBaseObject.BreakOpenHealth(); //004BDCD0
@@ -6565,6 +6578,7 @@ begin
 
 
   try
+    ProcessScriptDelays;
     m_dwGetMsgTick := GetTickCount();
     while (GetTickCount - m_dwGetMsgTick < g_Config.dwHumanGetMsgTime) and GetMessage(@ProcessMsg) do
     begin
@@ -15268,6 +15282,127 @@ begin
   end;
 end;
 
+procedure TPlayObject.ApplyScriptAbility;
+
+  function AddRange(Value: LongWord; HighIndex: Integer): LongWord;
+  begin
+    Result := MakeLong(_MIN(High(Word), LoWord(Value) + m_ScriptAbility[HighIndex + 1]),
+      _MIN(High(Word), HiWord(Value) + m_ScriptAbility[HighIndex]));
+  end;
+
+begin
+  m_WAbil.AC := AddRange(m_WAbil.AC, 1);
+  m_WAbil.MAC := AddRange(m_WAbil.MAC, 3);
+  m_WAbil.DC := AddRange(m_WAbil.DC, 5);
+  m_WAbil.MC := AddRange(m_WAbil.MC, 7);
+  m_WAbil.SC := AddRange(m_WAbil.SC, 9);
+end;
+
+procedure TPlayObject.ChangeScriptAbility(AbilityIndex, Value: Integer);
+begin
+  if (AbilityIndex < 1) or (AbilityIndex > 10) or (Value < 0) or (Value > High(Word)) then Exit;
+  m_ScriptAbility[AbilityIndex] := Value;
+  RecalcAbilitys;
+  SendMsg(Self, RM_ABILITY, 0, 0, 0, 0, '');
+end;
+
+procedure TPlayObject.ClearScriptDelay(const TimerName: string);
+var
+  I: Integer;
+  Pending: pTScriptDelay;
+begin
+  if m_ScriptDelays = nil then Exit;
+  for I := m_ScriptDelays.Count - 1 downto 0 do begin
+    Pending := m_ScriptDelays.Items[I];
+    if (TimerName = '') or (CompareText(Pending.TimerName, TimerName) = 0) then begin
+      m_ScriptDelays.Delete(I);
+      Dispose(Pending);
+    end;
+  end;
+end;
+
+procedure TPlayObject.ScheduleScriptDelay(NPC: TBaseObject;
+  const LabelName, TimerName: string; DelaySeconds: Integer);
+var
+  I: Integer;
+  Pending: pTScriptDelay;
+begin
+  if m_boGhost or m_boEmergencyClose or m_boKickFlag or m_boSoftClose or
+     (NPC = nil) or (DelaySeconds <= 0) or (DelaySeconds > MaxInt div 1000) then Exit;
+  if TimerName <> '' then ClearScriptDelay(TimerName)
+  else for I := m_ScriptDelays.Count - 1 downto 0 do begin
+    Pending := m_ScriptDelays.Items[I];
+    if (Pending.NPC = NPC) and (Pending.TimerName = '') and
+       (CompareText(Pending.LabelName, LabelName) = 0) then begin
+      m_ScriptDelays.Delete(I);
+      Dispose(Pending);
+    end;
+  end;
+  New(Pending);
+  Pending.NPC := NPC;
+  Pending.LabelName := LabelName;
+  Pending.TimerName := TimerName;
+  Pending.StartTick := GetTickCount;
+  Pending.Delay := LongWord(DelaySeconds) * 1000;
+  m_ScriptDelays.Add(Pending);
+end;
+
+procedure TPlayObject.ProcessScriptDelays;
+var
+  I, Remaining: Integer;
+  Pending: pTScriptDelay;
+  NPC: TNormNpc;
+  PreviousNPC: TBaseObject;
+  PreviousScript: pTScript;
+  PreviousValues: array[0..9] of Integer;
+begin
+  if m_boGhost or m_boEmergencyClose or m_boKickFlag or m_boSoftClose then begin
+    ClearScriptDelay('');
+    Exit;
+  end;
+  I := 0;
+  Remaining := m_ScriptDelays.Count;
+  while (I < m_ScriptDelays.Count) and (Remaining > 0) do begin
+    Dec(Remaining);
+    Pending := m_ScriptDelays.Items[I];
+    if LongWord(GetTickCount - Pending.StartTick) < Pending.Delay then begin
+      Inc(I);
+      Continue;
+    end;
+    m_ScriptDelays.Delete(I);
+    try
+      NPC := nil;
+      if (g_ManageNPC <> nil) and (Pending.NPC = g_ManageNPC) then NPC := g_ManageNPC
+      else if (g_FunctionNPC <> nil) and (Pending.NPC = g_FunctionNPC) then NPC := g_FunctionNPC
+      else begin
+        NPC := UserEngine.FindMerchant(Pending.NPC);
+        if NPC = nil then NPC := UserEngine.FindNPC(Pending.NPC);
+      end;
+      if (NPC <> nil) and not NPC.m_boGhost then begin
+        PreviousNPC := m_NPC;
+        PreviousScript := m_Script;
+        Move(m_nVal, PreviousValues, SizeOf(PreviousValues));
+        try
+          // Select the current script, including after an NPC script reload.
+          m_NPC := nil;
+          m_Script := nil;
+          NPC.GotoLable(Self, Pending.LabelName, False);
+        finally
+          m_NPC := PreviousNPC;
+          m_Script := PreviousScript;
+          Move(PreviousValues, m_nVal, SizeOf(PreviousValues));
+        end;
+      end;
+    finally
+      Dispose(Pending);
+    end;
+    if m_boGhost or m_boEmergencyClose or m_boKickFlag or m_boSoftClose then begin
+      ClearScriptDelay('');
+      Break;
+    end;
+  end;
+end;
+
 procedure TPlayObject.RunKillMobScript(const MonsterName: string);
 var PreviousName: string;
 begin
@@ -15285,6 +15420,7 @@ constructor TPlayObject.Create; //004C9860
 begin
   inherited;
   m_btRaceServer := RC_PLAYOBJECT;
+  m_ScriptDelays := TList.Create;
   m_boEmergencyClose := False;
   m_boSwitchData := False;
   m_boReconnection := False;
@@ -15479,6 +15615,8 @@ begin
   end;
   m_DynamicVarList.Free;
   m_CanJmpScriptLableList.Free;
+  ClearScriptDelay('');
+  m_ScriptDelays.Free;
   inherited;
 end;
 
