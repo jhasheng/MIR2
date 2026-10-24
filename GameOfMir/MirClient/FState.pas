@@ -5028,26 +5028,27 @@ begin
                end;
 
                if fdata <> '' then begin
-                  BoldTextOut (dsurface, SurfaceX(Left+lx+sx), SurfaceY(Top+ly), clWhite, clBlack, fdata);
-                  sx := sx + dsurface.Canvas.TextWidth(fdata);
+                  sx := sx + ScriptTextOut(dsurface,
+                    Point(SurfaceX(Left+lx+sx), SurfaceY(Top+ly)), fdata, clWhite);
                end;
                if cmdstr <> '' then begin
                   if RequireAddPoints then begin
                      new (pcp);
-                     pcp.rc := Rect (lx+sx, ly, lx+sx + dsurface.Canvas.TextWidth(cmdstr), ly + 14);
+                     pcp.rc := Rect (lx+sx, ly, lx+sx + ScriptTextWidth(dsurface.Canvas, cmdstr), ly + 14);
                      pcp.RStr := cmdparam;
                      MDlgPoints.Add (pcp);
                   end;
                   dsurface.Canvas.Font.Style := dsurface.Canvas.Font.Style + [fsUnderline];
                   if SelectMenuStr = cmdparam then
-                     BoldTextOut (dsurface, SurfaceX(Left+lx+sx), SurfaceY(Top+ly), clRed, clBlack, cmdstr)
-                  else BoldTextOut (dsurface, SurfaceX(Left+lx+sx), SurfaceY(Top+ly), clYellow, clBlack, cmdstr);
-                  sx := sx + dsurface.Canvas.TextWidth(cmdstr);
+                     sx := sx + ScriptTextOut(dsurface,
+                       Point(SurfaceX(Left+lx+sx), SurfaceY(Top+ly)), cmdstr, clRed)
+                  else sx := sx + ScriptTextOut(dsurface,
+                       Point(SurfaceX(Left+lx+sx), SurfaceY(Top+ly)), cmdstr, clYellow);
                   dsurface.Canvas.Font.Style := dsurface.Canvas.Font.Style - [fsUnderline];
                end;
             end;
             if data <> '' then
-               BoldTextOut (dsurface, SurfaceX(Left+lx+sx), SurfaceY(Top+ly), clWhite, clBlack, data);
+               ScriptTextOut(dsurface, Point(SurfaceX(Left+lx+sx), SurfaceY(Top+ly)), data, clWhite);
          end;
          ly := ly + 16;  //数值各开地方
       end;
