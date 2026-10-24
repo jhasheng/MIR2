@@ -20,21 +20,11 @@ const
 
   CUSTOMLIBFILE = 0; //自定义图库位置
   
-{$IF SWH = SWH800}
-   SCREENWIDTH = 800;
-   SCREENHEIGHT = 600;
-{$ELSEIF SWH = SWH1024}
-   SCREENWIDTH = 1024;
-   SCREENHEIGHT = 768;
-{$IFEND}
-
-   MAPSURFACEWIDTH = SCREENWIDTH;
-   MAPSURFACEHEIGHT = SCREENHEIGHT- 155;
-
+   MAXSCREENWIDTH = 1920;
+   MAXSCREENHEIGHT = 1080;
+   HUDWIDTH = 800;
    WINLEFT = 60;
-   WINTOP  = 60;
-   WINRIGHT = SCREENWIDTH-60;
-   BOTTOMEDGE = SCREENHEIGHT-30;  // Bottom WINBOTTOM
+   WINTOP = 60;
 
    MAPDIR             = 'Map\'; //地图文件所在目录
    CONFIGFILE         = 'Config\%s.ini';
@@ -79,8 +69,8 @@ const
    MAXX = 40;
    MAXY = 40;
    }
-  MAXX = SCREENWIDTH div 20;
-  MAXY = SCREENWIDTH div 20;
+  MAXX = 40;
+  MAXY = 40;
 
   DEFAULTCURSOR = 0; //系统默认光标
   IMAGECURSOR   = 1; //图形光标
@@ -91,6 +81,35 @@ const
   MAXFONT = 8;
   ENEMYCOLOR = 69;
 
+var
+   SCREENWIDTH: Integer = 1024;
+   SCREENHEIGHT: Integer = 768;
+   MAPSURFACEWIDTH: Integer = 1024;
+   MAPSURFACEHEIGHT: Integer = 768;
+   WINRIGHT: Integer = 964;
+   BOTTOMEDGE: Integer = 738;
+   HUDLEFT: Integer = 112;
+
+procedure SetGameResolution(const Resolution: string);
+
 implementation
+
+procedure SetGameResolution(const Resolution: string);
+begin
+   SCREENWIDTH := 1024;
+   SCREENHEIGHT := 768;
+   if Resolution = '1280x720' then begin
+      SCREENWIDTH := 1280;
+      SCREENHEIGHT := 720;
+   end else if Resolution = '1920x1080' then begin
+      SCREENWIDTH := 1920;
+      SCREENHEIGHT := 1080;
+   end;
+   MAPSURFACEWIDTH := SCREENWIDTH;
+   MAPSURFACEHEIGHT := SCREENHEIGHT;
+   WINRIGHT := SCREENWIDTH - 60;
+   BOTTOMEDGE := SCREENHEIGHT - 30;
+   HUDLEFT := (SCREENWIDTH - HUDWIDTH) div 2;
+end;
 
 end.
