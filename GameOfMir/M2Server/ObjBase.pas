@@ -925,6 +925,8 @@ type
     procedure ProcessSpiritSuite;
     function HorseRunTo(btDir: Byte; boFlag: Boolean): Boolean;
   public
+    m_sScriptKilledMob: string;
+    procedure RunKillMobScript(const MonsterName: string);
     constructor Create(); override;
     destructor Destroy; override;
     procedure SendSocket(DefMsg: pTDefaultMessage; sMsg: string); virtual;
@@ -15266,6 +15268,19 @@ begin
   end;
 end;
 
+procedure TPlayObject.RunKillMobScript(const MonsterName: string);
+var PreviousName: string;
+begin
+  if g_FunctionNPC = nil then Exit;
+  PreviousName := m_sScriptKilledMob;
+  m_sScriptKilledMob := MonsterName;
+  try
+    g_FunctionNPC.GotoLable(Self, '@OnKillMob', False);
+  finally
+    m_sScriptKilledMob := PreviousName;
+  end;
+end;
+
 constructor TPlayObject.Create; //004C9860
 begin
   inherited;
@@ -20804,7 +20819,7 @@ begin
         if m_ExpHitter.m_btRaceServer = RC_PLAYOBJECT then
         begin
           if g_FunctionNPC <> nil then
-            g_FunctionNPC.GotoLable(TPlayObject(m_ExpHitter), '@OnKillMob', False);
+            TPlayObject(m_ExpHitter).RunKillMobScript(m_sCharName);
 
           tExp := m_ExpHitter.CalcGetExp(m_Abil.Level, m_dwFightExp);
           if not g_Config.boVentureServer then
@@ -20858,7 +20873,7 @@ begin
         if m_LastHiter.m_btRaceServer = RC_PLAYOBJECT then
         begin
           if g_FunctionNPC <> nil then
-            g_FunctionNPC.GotoLable(TPlayObject(m_LastHiter), '@OnKillMob', False);
+            TPlayObject(m_LastHiter).RunKillMobScript(m_sCharName);
 
           tExp := m_LastHiter.CalcGetExp(m_Abil.Level, m_dwFightExp);
           if not g_Config.boVentureServer then

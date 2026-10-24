@@ -1851,6 +1851,11 @@ var
       nCMDCode:=nRANDOM;
       Goto L001;
     end;
+    if sCmd = 'CHECKKILLMOBNAME' then begin
+      if (sParam1 = '') or (sParam2 <> '1') or (sParam3 <> '') then Exit;
+      nCMDCode := nSC_CHECKKILLMOBNAME;
+      Goto L001;
+    end;
     if (sCmd = 'CHECKITEMCOUNT') or (sCmd = 'CHECKSKILL') then begin
       if (sParam1 = '') or (sParam4 <> '') or
          ((sParam2 <> '?') and (sParam2 <> '<')) or
@@ -2382,6 +2387,11 @@ var
       ArrestStringEx(sParam1,'[',']',sParam1);
       if not IsStringNumber(sParam1) then nCMDCode:=0;
       if not IsStringNumber(sParam2) then nCMDCode:=0;
+    end;
+    if sCmd = 'REFSHOWNAME' then begin
+      if sParam1 <> '' then Exit;
+      nCMDCode := nSC_REFSHOWNAME;
+      Goto L001;
     end;
     if sCmd = 'TAKECOUNT' then begin
       if (sParam1 = '') or (sParam3 <> '') or

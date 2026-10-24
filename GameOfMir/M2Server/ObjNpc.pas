@@ -6938,7 +6938,7 @@ procedure TNormNpc.GotoLable(PlayObject: TPlayObject; sLabel: string; boExtJmp: 
 var
   i, ii, III: Integer;
   List1C: TStringList;
-  bo11: Boolean;
+  bo11, HasNativeKillLabel: Boolean;
   n18: Integer;
   n20: Integer;
   sSENDMSG: string;
@@ -7203,6 +7203,9 @@ var
           end;
         nCHECKBBCOUNT: if PlayObject.m_SlaveList.Count < QuestConditionInfo.nParam1 then Result := False;
         nCHECKCREDITPOINT: ;
+        nSC_CHECKKILLMOBNAME:
+          Result := (PlayObject.m_sScriptKilledMob <> '') and
+            (CompareText(PlayObject.m_sScriptKilledMob, QuestConditionInfo.sParam1) = 0);
         nSC_CHECKITEMCOUNT:
           begin
             PlayObject.QuestCheckItem(QuestConditionInfo.sParam1, n1C, nMaxDura, nDura);
@@ -7915,6 +7918,7 @@ var
             n2C := Str_ToInt(QuestActionInfo.sParam2, 0);
             PlayObject.SetQuestFlagStatus(n28, n2C);
           end;
+        nSC_REFSHOWNAME: PlayObject.RefShowName;
         nSC_TAKECOUNT:
           begin
             PlayObject.QuestCheckItem(QuestActionInfo.sParam1, n14, n1C, n28);
@@ -8674,6 +8678,14 @@ begin //0049E584
   //跳转到指定示签，执行
   if (Script <> nil) then
   begin
+    if CompareText(sLabel, '@OnKillMob') = 0 then begin
+      HasNativeKillLabel := False;
+      for ii := 0 to Script.RecordList.Count - 1 do begin
+        SayingRecord := Script.RecordList.Items[ii];
+        if CompareText(SayingRecord.sLabel, '@OnKillMob') = 0 then HasNativeKillLabel := True;
+      end;
+      if not HasNativeKillLabel then sLabel := '@KillMonster';
+    end;
     for ii := 0 to Script.RecordList.Count - 1 do
     begin
       SayingRecord := Script.RecordList.Items[ii];
