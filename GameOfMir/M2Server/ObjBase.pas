@@ -5616,7 +5616,7 @@ begin
     RM_LOGON:
       begin //10050
         m_DefMsg := MakeDefaultMsg(SM_NEWMAP, Integer(Self), m_nCurrX, m_nCurrY, DayBright());
-        SendSocket(@m_DefMsg, EncodeString(m_sMapName));
+        SendSocket(@m_DefMsg, EncodeString(m_PEnvir.sMapFileName));
         SendMsg(Self, RM_CHANGELIGHT, 0, 0, 0, 0, '');
         SendLogon();
         SendServerConfig();
@@ -5793,7 +5793,7 @@ begin
 
     RM_CHANGEMAP:
       begin
-        SendDefMessage(SM_CHANGEMAP, Integer(Self), m_nCurrX, m_nCurrY, DayBright(), ProcessMsg.sMsg);
+        SendDefMessage(SM_CHANGEMAP, Integer(Self), m_nCurrX, m_nCurrY, DayBright(), m_PEnvir.sMapFileName);
         RefUserState();
         SendMapDescription();
         SendServerConfig();

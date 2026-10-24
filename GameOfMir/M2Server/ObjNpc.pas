@@ -63,6 +63,7 @@ type
     nParam5: Integer;
     sParam6: string;
     nParam6: Integer;
+    boNegate: Boolean;
   end;
   pTQuestConditionInfo = ^TQuestConditionInfo;
   TSayingProcedure = record //0x14
@@ -71,6 +72,7 @@ type
     sSayMsg: string; //0x08
     ElseActionList: TList; //0x0C
     sElseSayMsg: string; //0x10
+    boInvalid: Boolean;
   end;
   pTSayingProcedure = ^TSayingProcedure;
   TSayingRecord = record //0x08
@@ -5599,6 +5601,13 @@ begin
   end;
 end;
 
+function ScriptThreshold(Value, Required: Integer; const OperatorText: string): Boolean;
+begin
+  Result := False;
+  if OperatorText = '?' then Result := Value >= Required
+  else if OperatorText = '<' then Result := Value < Required;
+end;
+
 function TNormNpc.ConditionOfCheckMagicLvl(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
 var
   i: Integer;
@@ -7096,6 +7105,7 @@ var
     Hour, Min, Sec, MSec: Word;
     Envir: TEnvirnoment;
     StdItem: TItem;
+    UserMagic: pTUserMagic;
   begin
     Result := True;
     for i := 0 to ConditionList.Count - 1 do
@@ -7193,6 +7203,23 @@ var
           end;
         nCHECKBBCOUNT: if PlayObject.m_SlaveList.Count < QuestConditionInfo.nParam1 then Result := False;
         nCHECKCREDITPOINT: ;
+        nSC_CHECKITEMCOUNT:
+          begin
+            PlayObject.QuestCheckItem(QuestConditionInfo.sParam1, n1C, nMaxDura, nDura);
+            Result := ScriptThreshold(n1C, QuestConditionInfo.nParam3, QuestConditionInfo.sParam2);
+          end;
+        nSC_CHECKSKILL:
+          begin
+            n1C := -1; // An unlearned skill must not satisfy '? 0'.
+            for n18 := 0 to PlayObject.m_MagicList.Count - 1 do begin
+              UserMagic := PlayObject.m_MagicList.Items[n18];
+              if CompareText(UserMagic.MagicInfo.sMagicName, QuestConditionInfo.sParam1) = 0 then begin
+                n1C := UserMagic.btLevel;
+                Break;
+              end;
+            end;
+            Result := ScriptThreshold(n1C, QuestConditionInfo.nParam3, QuestConditionInfo.sParam2);
+          end;
         nCHECKITEM:
           begin
             UserItem := PlayObject.QuestCheckItem(QuestConditionInfo.sParam1, n1C, nMaxDura, nDura);
@@ -7486,6 +7513,7 @@ var
         nSC_CHECKMAGICLVL: if not ConditionOfCheckMagicLvl(PlayObject, QuestConditionInfo) then Result := False;
         nSC_CHECKGROUPCLASS: if not ConditionOfCheckGroupClass(PlayObject, QuestConditionInfo) then Result := False;
       end;
+      if QuestConditionInfo.boNegate then Result := not Result;
       if not Result then Break;
     end;
   end;
@@ -7886,6 +7914,16 @@ var
             n28 := Str_ToInt(QuestActionInfo.sParam1, 0);
             n2C := Str_ToInt(QuestActionInfo.sParam2, 0);
             PlayObject.SetQuestFlagStatus(n28, n2C);
+          end;
+        nSC_TAKECOUNT:
+          begin
+            PlayObject.QuestCheckItem(QuestActionInfo.sParam1, n14, n1C, n28);
+            if n14 < QuestActionInfo.nParam2 then begin
+              PlayObject.SysMsg('材料不足，操作已停止。', c_Red, t_Hint);
+              Result := False;
+              Exit;
+            end;
+            TakeItem(QuestActionInfo.sParam1, QuestActionInfo.nParam2);
           end;
         nTAKE: TakeItem(QuestActionInfo.sParam1, QuestActionInfo.nParam2);
         //nGIVE: GiveItem(QuestActionInfo.sParam1,QuestActionInfo.nParam2);
@@ -8646,6 +8684,11 @@ begin //0049E584
         for III := 0 to SayingRecord.ProcedureList.Count - 1 do
         begin
           SayingProcedure := SayingRecord.ProcedureList.Items[III];
+          // Do not run a partially loaded branch or continue to a later reward.
+          if SayingProcedure.boInvalid then begin
+            PlayObject.SysMsg('此功能脚本尚未兼容，操作已停止。', c_Red, t_Hint);
+            Break;
+          end;
           bo11 := False;
           if QuestCheckCondition(SayingProcedure.ConditionList) then
           begin
