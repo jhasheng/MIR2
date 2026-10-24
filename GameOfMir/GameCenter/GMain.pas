@@ -1243,7 +1243,7 @@ begin
   IniGameConf.WriteInteger('LoginGate','ShowLogLevel',g_nLoginGate_ShowLogLevel);
   IniGameConf.WriteInteger('LoginGate','MaxConnOfIPaddr',g_nLoginGate_MaxConnOfIPaddr);
   IniGameConf.WriteInteger('LoginGate','BlockMethod',g_nLoginGate_BlockMethod);
-  IniGameConf.WriteInteger('LoginGate','KeepConnectTimeOut',g_nLoginGate_KeepConnectTimeOut);
+  IniGameConf.WriteInteger('LoginGate','KeepConnectTimeOut',IniGameConf.ReadInteger('LoginGate','KeepConnectTimeOut',g_nLoginGate_KeepConnectTimeOut));
   IniGameConf.Free;
 end;
 
