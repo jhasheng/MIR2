@@ -935,6 +935,9 @@ type
     m_sScriptKilledMob: string;
     m_ScriptAbility: array[1..10] of Integer;
     m_ScriptDelays: TList;
+    m_ScriptStrings: TStringList;
+    function GetScriptString(const Name: string): string;
+    procedure SetScriptString(const Name, Value: string);
     procedure ApplyScriptAbility;
     procedure ChangeScriptAbility(AbilityIndex, Value: Integer);
     procedure ScheduleScriptDelay(NPC: TBaseObject; const LabelName, TimerName: string; DelaySeconds: Integer);
@@ -15282,6 +15285,21 @@ begin
   end;
 end;
 
+function TPlayObject.GetScriptString(const Name: string): string;
+var Index: Integer;
+begin
+  Result := '';
+  Index := ScriptStringIndex(Name);
+  if Index >= 0 then Result := m_ScriptStrings.Values[IntToStr(Index)];
+end;
+
+procedure TPlayObject.SetScriptString(const Name, Value: string);
+var Index: Integer;
+begin
+  Index := ScriptStringIndex(Name);
+  if Index >= 0 then m_ScriptStrings.Values[IntToStr(Index)] := Value;
+end;
+
 procedure TPlayObject.ApplyScriptAbility;
 
   function AddRange(Value: LongWord; HighIndex: Integer): LongWord;
@@ -15421,6 +15439,7 @@ begin
   inherited;
   m_btRaceServer := RC_PLAYOBJECT;
   m_ScriptDelays := TList.Create;
+  m_ScriptStrings := TStringList.Create;
   m_boEmergencyClose := False;
   m_boSwitchData := False;
   m_boReconnection := False;
@@ -15617,6 +15636,7 @@ begin
   m_CanJmpScriptLableList.Free;
   ClearScriptDelay('');
   m_ScriptDelays.Free;
+  m_ScriptStrings.Free;
   inherited;
 end;
 

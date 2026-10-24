@@ -72,7 +72,7 @@ var
   nDeCryptString:Integer= -1;
 implementation
 
-uses ObjBase, Envir;
+uses ObjBase, Envir, Castle;
 
 
 //{$R *.dfm}
@@ -1849,6 +1849,24 @@ var
     end;
     if sCmd = sRANDOM then begin //00489FB2
       nCMDCode:=nRANDOM;
+      Goto L001;
+    end;
+    if sCmd = 'CHECKCASTLESTATE' then begin
+      sParam1 := UpperCase(sParam1);
+      if sParam3 <> '' then Exit;
+      if sParam1 = 'DOOR' then begin
+        if sParam2 <> '' then Exit;
+      end else begin
+        if not IsStringNumber(sParam2) or (Str_ToInt(sParam2, -1) < 0) then Exit;
+        if sParam1 = 'WALL' then begin
+          if (Str_ToInt(sParam2, 0) < 1) or (Str_ToInt(sParam2, 0) > 3) then Exit;
+        end else if sParam1 = 'ARCHER' then begin
+          if Str_ToInt(sParam2, MAXCASTLEARCHER) >= MAXCASTLEARCHER then Exit;
+        end else if sParam1 = 'GUARD' then begin
+          if Str_ToInt(sParam2, MAXCALSTEGUARD) >= MAXCALSTEGUARD then Exit;
+        end else Exit;
+      end;
+      nCMDCode := nSC_CHECKCASTLESTATE;
       Goto L001;
     end;
     if sCmd = 'CHECKKILLMOBNAME' then begin

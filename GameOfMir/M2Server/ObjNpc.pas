@@ -246,6 +246,7 @@ type
     function ConditionOfCheckInMapRange(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
     function ConditionOfCheckIsAttackGuild(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
     function ConditionOfCheckIsDefenseGuild(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
+    function ConditionOfCheckCastleState(QuestConditionInfo: pTQuestConditionInfo): Boolean;
     function ConditionOfCheckCastleDoorStatus(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
     function ConditionOfCheckIsAttackAllyGuild(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
     function ConditionOfCheckIsDefenseAllyGuild(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
@@ -5008,6 +5009,42 @@ begin
   end;
 end;
 
+function TNormNpc.ConditionOfCheckCastleState(QuestConditionInfo: pTQuestConditionInfo): Boolean;
+var
+  Castle: TUserCastle;
+  Defense: TBaseObject;
+  Index: Integer;
+  RequireFullHealth: Boolean;
+begin
+  Result := False;
+  if m_Castle = nil then Exit;
+  Castle := TUserCastle(m_Castle);
+  Defense := nil;
+  Index := QuestConditionInfo.nParam2;
+  RequireFullHealth := True;
+  if QuestConditionInfo.sParam1 = 'DOOR' then Defense := Castle.m_MainDoor.BaseObject
+  else if QuestConditionInfo.sParam1 = 'WALL' then begin
+    case Index of
+      1: Defense := Castle.m_LeftWall.BaseObject;
+      2: Defense := Castle.m_CenterWall.BaseObject;
+      3: Defense := Castle.m_RightWall.BaseObject;
+    end;
+  end else if QuestConditionInfo.sParam1 = 'ARCHER' then begin
+    if (Index >= Low(Castle.m_Archer)) and (Index <= High(Castle.m_Archer)) then
+      Defense := Castle.m_Archer[Index].BaseObject;
+    RequireFullHealth := False;
+  end else if QuestConditionInfo.sParam1 = 'GUARD' then begin
+    if (Index >= Low(Castle.m_Guard)) and (Index <= High(Castle.m_Guard)) then
+      Defense := Castle.m_Guard[Index].BaseObject;
+    RequireFullHealth := False;
+  end;
+  if (Defense = nil) or Defense.m_boDeath or Defense.m_boGhost then Exit;
+  Result := Defense.m_WAbil.HP > 0;
+  if RequireFullHealth then
+    Result := Result and (Defense.m_WAbil.MaxHP > 0) and
+      (Defense.m_WAbil.HP >= Defense.m_WAbil.MaxHP);
+end;
+
 function TNormNpc.ConditionOfCheckCastleDoorStatus(PlayObject: TPlayObject;
   QuestConditionInfo: pTQuestConditionInfo): Boolean;
 var
@@ -6905,6 +6942,10 @@ begin
   if CompareLStr(sVariable, '$STR(', Length('$STR(')) then
   begin
     ArrestStringEx(sVariable, '(', ')', s14);
+    if ScriptStringIndex(s14) >= 0 then begin
+      sMsg := sub_49ADB8(sMsg, '<' + sVariable + '>', PlayObject.GetScriptString(s14));
+      Exit;
+    end;
     n18 := GetValNameNo(s14);
     if n18 >= 0 then
     begin
@@ -7203,6 +7244,7 @@ var
           end;
         nCHECKBBCOUNT: if PlayObject.m_SlaveList.Count < QuestConditionInfo.nParam1 then Result := False;
         nCHECKCREDITPOINT: ;
+        nSC_CHECKCASTLESTATE: Result := ConditionOfCheckCastleState(QuestConditionInfo);
         nSC_CHECKKILLMOBNAME:
           Result := (PlayObject.m_sScriptKilledMob <> '') and
             (CompareText(PlayObject.m_sScriptKilledMob, QuestConditionInfo.sParam1) = 0);
@@ -8051,6 +8093,11 @@ var
           end;
         nMOV:
           begin
+            if ScriptStringIndex(QuestActionInfo.sParam1) >= 0 then begin
+              PlayObject.SetScriptString(QuestActionInfo.sParam1,
+                GetLineVariableText(PlayObject, QuestActionInfo.sParam2));
+              Continue;
+            end;
             n14 := GetValNameNo(QuestActionInfo.sParam1);
             if n14 >= 0 then
             begin
