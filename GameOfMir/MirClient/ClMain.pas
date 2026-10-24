@@ -1017,7 +1017,14 @@ begin
    Caption:=g_sLogoText;
    //全屏
    if g_boFullScreen then
-     DXDraw.Options:=DXDraw.Options + [doFullScreen];
+     DXDraw.Options:=DXDraw.Options + [doFullScreen]
+   else begin
+     DXDraw.Options := DXDraw.Options - [doFullScreen];
+     BorderStyle := bsSingle;
+     BorderIcons := [biSystemMenu, biMinimize];
+     ClientWidth := SCREENWIDTH;
+     ClientHeight := SCREENHEIGHT;
+   end;
 
    LoadWMImagesLib(nil);
    NpcImageList:=TList.Create;
@@ -1565,13 +1572,8 @@ begin
       if doFullScreen in DxDraw.Options then begin
          //Screen.Cursor := crNone;
       end else begin
-         Left := 0;
-         Top := 0;
-         Width := SCREENWIDTH;
-         Height := SCREENHEIGHT;
          g_boNoDarkness := TRUE;
          g_boUseDIBSurface := TRUE;
-         //frmMain.BorderStyle := bsSingle;
       end;
 
 
@@ -1639,6 +1641,7 @@ begin
    CursorSurface := g_WMainImages.Images[0];
    if CursorSurface <> nil then begin
       GetCursorPos (p);
+      p := DxDraw.ScreenToClient(p);
       DxDraw.Surface.Draw (p.x, p.y, CursorSurface.ClientRect, CursorSurface, TRUE);
    end;
    //==========================
@@ -1650,6 +1653,7 @@ begin
       else d := g_WBagItemImages.Images[115]; //金币外形
       if d <> nil then begin
          GetCursorPos (p);
+         p := DxDraw.ScreenToClient(p);
          DxDraw.Surface.Draw (p.x-(d.ClientRect.Right div 2),
                               p.y-(d.ClientRect.Bottom div 2),
                               d.ClientRect,
@@ -2942,6 +2946,7 @@ var
    pt: TPoint;
 begin
    GetCursorPos (pt);
+   pt := DxDraw.ScreenToClient(pt);
    if g_DWinMan.DblClick (pt.X, pt.Y) then exit;
 end;
 
@@ -2975,20 +2980,17 @@ var
    pt: TPoint;
 begin
    GetCursorPos (pt);
+   pt := DxDraw.ScreenToClient(pt);
    if g_DWinMan.Click (pt.X, pt.Y) then exit;
 end;
 //鼠标事件:当选择了魔法等攻击前，显示一个选择被攻击对象的鼠标
 procedure TfrmMain.MouseTimerTimer(Sender: TObject);
 var
   I: Integer;
-   pt: TPoint;
    keyvalue: TKeyBoardState;
    shift: TShiftState;
 
 begin
-   GetCursorPos (pt);
-   SetCursorPos (pt.X, pt.Y);
-
    if g_TargetCret <> nil then begin
       if ActionKey > 0 then begin
          ProcessKeyMessages;
