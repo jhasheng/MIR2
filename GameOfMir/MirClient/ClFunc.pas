@@ -70,6 +70,7 @@ function  GetFlyDirection16 (sx, sy, ttx, tty: integer): Integer;
 function  PrivDir (ndir: integer): integer;
 function  NextDir (ndir: integer): integer;
 procedure BoldTextOut (surface: TDirectDrawSurface; x, y, fcolor, bcolor: integer; str: string);
+function NextScriptLink(var Source, Prefix, Link: string): Boolean;
 function NextScriptText(const Source: string; var Offset: Integer;
   var Text: string; var ColorIndex: Integer): Boolean;
 function ScriptTextWidth(Canvas: TCanvas; const Text: string): Integer;
@@ -609,6 +610,43 @@ begin
    else Result := ndir+1;
 end;
 //着重显示文字（以bcolor色加文字边框）,效果如镂空
+function NextScriptLink(var Source, Prefix, Link: string): Boolean;
+var
+  I, J: Integer;
+begin
+  Result := False;
+  Prefix := '';
+  Link := '';
+  I := 1;
+  while I <= Length(Source) do begin
+    if Byte(Source[I]) >= 128 then begin
+      Inc(I, 2);
+      Continue;
+    end;
+    if Source[I] = '<' then begin
+      J := I + 1;
+      while J <= Length(Source) do begin
+        if Byte(Source[J]) >= 128 then Inc(J, 2)
+        else if Source[J] = '>' then Break
+        else Inc(J);
+      end;
+      if J <= Length(Source) then begin
+        // Unexpanded server variables are text, never clickable menu links.
+        if (J > I + 1) and (Source[I + 1] = '$') then begin
+          I := J + 1;
+          Continue;
+        end;
+        Prefix := Copy(Source, 1, I - 1);
+        Link := Copy(Source, I + 1, J - I - 1);
+        Source := Copy(Source, J + 1, MaxInt);
+        Result := True;
+        Exit;
+      end;
+    end;
+    Inc(I);
+  end;
+end;
+
 function NextScriptText(const Source: string; var Offset: Integer;
   var Text: string; var ColorIndex: Integer): Boolean;
 var

@@ -5005,11 +5005,7 @@ begin
          if data <> '' then begin
             sx := 0;
             fdata := '';
-            while (pos('<', data) > 0) and (pos('>', data) > 0) and (data <> '') do begin
-               if data[1] <> '<' then begin
-                  data := '<' + GetValidStr3 (data, fdata, ['<']);
-               end;
-               data := ArrestStringEx (data, '<', '>', cmdstr);
+            while NextScriptLink(data, fdata, cmdstr) do begin
 
                //fdata + cmdstr + data
                if cmdstr <> '' then begin

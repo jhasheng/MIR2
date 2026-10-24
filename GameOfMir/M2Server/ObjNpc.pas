@@ -4,6 +4,10 @@ interface
 uses
   Windows, Classes, SysUtils, StrUtils, ObjBase, Grobal2, SDK, IniFiles ;
 type
+  TCampPoint = record
+    MapName: string;
+    X, Y: Integer;
+  end;
   TUpgradeInfo = record //0x40
     sUserName: string[ActorNameLen]; //0x00
     UserItem: TUserItem; //0x10
@@ -260,6 +264,10 @@ type
     function ConditionOfCheckGroupClass(PlayObject: TPlayObject; QuestConditionInfo: pTQuestConditionInfo): Boolean;
 
     function GetDynamicVarList(PlayObject: TPlayObject; sType: string; var sName: string): TList;
+    function ReadCampPoint(PlayObject: TPlayObject; var Point: TCampPoint): Boolean;
+    function SaveCampPoint(PlayObject: TPlayObject): Boolean;
+    procedure RecallCampPoint(PlayObject: TPlayObject);
+
   public
     constructor Create(); override;
     destructor Destroy; override;
@@ -5671,6 +5679,80 @@ begin
   inherited;
 end;
 
+function CampPointSection(PlayObject: TPlayObject): string;
+var
+  I: Integer;
+begin
+  // Hex keeps character names out of INI syntax and filesystem paths.
+  Result := 'Character_';
+  for I := 1 to Length(PlayObject.m_sCharName) do
+    Result := Result + IntToHex(Byte(PlayObject.m_sCharName[I]), 2);
+end;
+
+function TNormNpc.ReadCampPoint(PlayObject: TPlayObject;
+  var Point: TCampPoint): Boolean;
+var
+  Ini: TIniFile;
+  Data, Part: string;
+  Map: TEnvirnoment;
+begin
+  Result := False;
+  Point.MapName := '';
+  Point.X := -1;
+  Point.Y := -1;
+  Ini := TIniFile.Create(g_Config.sEnvirDir + 'CampPoints.ini');
+  try
+    Data := Ini.ReadString(CampPointSection(PlayObject), 'Point', '');
+  finally
+    Ini.Free;
+  end;
+  if Data = '' then Exit;
+  Data := GetValidStr3(Data, Point.MapName, [',']);
+  Data := GetValidStr3(Data, Part, [',']);
+  if not TryStrToInt(Part, Point.X) then Exit;
+  if not TryStrToInt(Data, Point.Y) then Exit;
+  Map := g_MapManager.FindMap(Point.MapName);
+  if Map = nil then Exit;
+  Result := Map.CanWalk(Point.X, Point.Y, True);
+end;
+
+function TNormNpc.SaveCampPoint(PlayObject: TPlayObject): Boolean;
+var
+  Ini: TIniFile;
+  Data: string;
+begin
+  Result := False;
+  if PlayObject.m_PEnvir = nil then Exit;
+  if not PlayObject.m_PEnvir.CanWalk(PlayObject.m_nCurrX,
+    PlayObject.m_nCurrY, True) then Exit;
+  Data := PlayObject.m_PEnvir.sMapName + ',' +
+    IntToStr(PlayObject.m_nCurrX) + ',' + IntToStr(PlayObject.m_nCurrY);
+  Ini := TIniFile.Create(g_Config.sEnvirDir + 'CampPoints.ini');
+  try
+    try
+      // One key stores the entire point, so a partial update cannot mix coordinates.
+      Ini.WriteString(CampPointSection(PlayObject), 'Point', Data);
+      Result := True;
+    except
+      on E: Exception do MainOutMessage('Save camp point: ' + E.Message);
+    end;
+  finally
+    Ini.Free;
+  end;
+end;
+
+procedure TNormNpc.RecallCampPoint(PlayObject: TPlayObject);
+var
+  Point: TCampPoint;
+begin
+  if not ReadCampPoint(PlayObject, Point) then begin
+    PlayObject.SysMsg('请先在老兵处设置营地。', c_Red, t_Hint);
+    Exit;
+  end;
+  PlayObject.SendRefMsg(RM_SPACEMOVE_FIRE, 0, 0, 0, 0, '');
+  PlayObject.SpaceMove(Point.MapName, Point.X, Point.Y, 0);
+end;
+
 procedure TNormNpc.ExeAction(PlayObject: TPlayObject; sParam1, sParam2,
   sParam3: string; nParam1, nParam2, nParam3: Integer);
 var
@@ -5678,6 +5760,14 @@ var
   dwInt: LongWord;
   BaseObject: TBaseObject;
 begin
+  if CompareText(sParam1, 'SETCAMP') = 0 then begin
+    if SaveCampPoint(PlayObject) then
+      PlayObject.SysMsg('营地已设置为' + PlayObject.m_PEnvir.sMapDesc + ' (' +
+        IntToStr(PlayObject.m_nCurrX) + ',' + IntToStr(PlayObject.m_nCurrY) + ')。',
+        c_Green, t_Hint)
+    else PlayObject.SysMsg('营地保存失败，请重试。', c_Red, t_Hint);
+    Exit;
+  end;
   //================================================
   //更改人物当前经验值
   //EXEACTION CHANGEEXP 0 经验数  设置为指定经验值
@@ -5872,7 +5962,27 @@ var
   nSecond: Integer;
   DynamicVar: pTDynamicVar;
   boFoundVar: Boolean;
+  CampPoint: TCampPoint;
+  CampMap: TEnvirnoment;
 begin
+  if sVariable = '$SELFNAME' then begin
+    sMsg := sub_49ADB8(sMsg, '<$SELFNAME>', m_sCharName);
+    Exit;
+  end;
+  if (sVariable = '$STR(B92)') or (sVariable = '$STR(B93)') or
+     (sVariable = '$STR(C92)') or (sVariable = '$STR(C93)') then begin
+    sText := '未设置';
+    if ReadCampPoint(PlayObject, CampPoint) then begin
+      if sVariable = '$STR(B92)' then begin
+        CampMap := g_MapManager.FindMap(CampPoint.MapName);
+        sText := CampMap.sMapDesc;
+      end else if sVariable = '$STR(B93)' then sText := CampPoint.MapName
+      else if sVariable = '$STR(C92)' then sText := IntToStr(CampPoint.X)
+      else sText := IntToStr(CampPoint.Y);
+    end;
+    sMsg := sub_49ADB8(sMsg, '<' + sVariable + '>', sText);
+    Exit;
+  end;
 //全局信息
   if sVariable = '$SERVERNAME' then
   begin
@@ -7833,8 +7943,14 @@ var
           end;
         nMAPMOVE:
           begin
-            PlayObject.SendRefMsg(RM_SPACEMOVE_FIRE, 0, 0, 0, 0, '');
-            PlayObject.SpaceMove(QuestActionInfo.sParam1, QuestActionInfo.nParam2, QuestActionInfo.nParam3, 0);
+            if (QuestActionInfo.sParam1 = '<$STR(B93)>') and
+               (QuestActionInfo.sParam2 = '<$STR(C92)>') and
+               (QuestActionInfo.sParam3 = '<$STR(C93)>') then
+              RecallCampPoint(PlayObject)
+            else begin
+              PlayObject.SendRefMsg(RM_SPACEMOVE_FIRE, 0, 0, 0, 0, '');
+              PlayObject.SpaceMove(QuestActionInfo.sParam1, QuestActionInfo.nParam2, QuestActionInfo.nParam3, 0);
+            end;
             bo11 := True;
           end;
         nMAP:
