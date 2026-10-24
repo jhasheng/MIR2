@@ -82,13 +82,13 @@ const
   ENEMYCOLOR = 69;
 
 var
-   SCREENWIDTH: Integer = 1024;
-   SCREENHEIGHT: Integer = 768;
-   MAPSURFACEWIDTH: Integer = 1024;
-   MAPSURFACEHEIGHT: Integer = 768;
-   WINRIGHT: Integer = 964;
-   BOTTOMEDGE: Integer = 738;
-   HUDLEFT: Integer = 112;
+   SCREENWIDTH: Integer = 800;
+   SCREENHEIGHT: Integer = 600;
+   MAPSURFACEWIDTH: Integer = 800;
+   MAPSURFACEHEIGHT: Integer = 600;
+   WINRIGHT: Integer = 740;
+   BOTTOMEDGE: Integer = 570;
+   HUDLEFT: Integer = 0;
 
 procedure SetGameResolution(const Resolution: string);
 
@@ -96,9 +96,12 @@ implementation
 
 procedure SetGameResolution(const Resolution: string);
 begin
-   SCREENWIDTH := 1024;
-   SCREENHEIGHT := 768;
-   if Resolution = '1280x720' then begin
+   SCREENWIDTH := 800;
+   SCREENHEIGHT := 600;
+   if Resolution = '1024x768' then begin
+      SCREENWIDTH := 1024;
+      SCREENHEIGHT := 768;
+   end else if Resolution = '1280x720' then begin
       SCREENWIDTH := 1280;
       SCREENHEIGHT := 720;
    end else if Resolution = '1920x1080' then begin

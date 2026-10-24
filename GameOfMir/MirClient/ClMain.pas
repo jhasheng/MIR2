@@ -952,7 +952,7 @@ var
 begin
   ini := nil;
   FtpConf := nil;
-  SetGameResolution('1024x768');
+  SetGameResolution('800x600');
 
   g_AutoPickupList :=TList.Create;
   g_ShowItemList   :=TGList.Create;
@@ -997,7 +997,7 @@ begin
        end;
 
        g_boFullScreen := ini.ReadBool ('Setup', 'FullScreen', g_boFullScreen);
-       SetGameResolution(ini.ReadString('Setup', 'Resolution', '1024x768'));
+       SetGameResolution(ini.ReadString('Setup', 'Resolution', '800x600'));
        g_sCurFontName := ini.ReadString ('Setup', 'FontName', g_sCurFontName);
 
        g_sMainParam1:=Ini.ReadString('Setup', 'Param1', '');
@@ -1247,6 +1247,7 @@ begin
       Font.Name := g_sCurFontName;
       Font.Size := 9;
       SetBounds(SCREENWIDTH - 144, 8, 132, 24);
+      Items.Add('800x600');
       Items.Add('1024x768');
       Items.Add('1280x720');
       Items.Add('1920x1080');
