@@ -5977,7 +5977,8 @@ var
   CampMap: TEnvirnoment;
 begin
   if sVariable = '$SELFNAME' then begin
-    sMsg := sub_49ADB8(sMsg, '<$SELFNAME>', m_sCharName);
+    // NPC world names may contain dialogue line separators. Keep this value inline.
+    sMsg := sub_49ADB8(sMsg, '<$SELFNAME>', AnsiReplaceText(m_sCharName, '\', ' '));
     Exit;
   end;
   if (sVariable = '$STR(B92)') or (sVariable = '$STR(B93)') or
