@@ -7066,7 +7066,7 @@ begin
   g_boParalyCanWalk      :=ClientConf.boParalyCanWalk;
   g_boParalyCanHit       :=ClientConf.boParalyCanHit;
   g_boParalyCanSpell     :=ClientConf.boParalyCanSpell;
-  g_boShowRedHPLable     := ClientConf.boShowRedHPLable;  //服务端控制是否显示血条,缺省为False
+  g_boShowRedHPLable     := True; // Keep head health bars enabled after server config.
   g_boShowHPNumber       := ClientConf.boShowHPNumber;
   g_boShowJobLevel       :=ClientConf.boShowJobLevel;
   g_boDuraAlert          :=ClientConf.boDuraAlert;

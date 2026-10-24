@@ -302,8 +302,10 @@ begin
            BoldTextOut (MSurface,actor.m_nSayX - 15 ,actor.m_nSayY - 5, clWhite, clBlack,infoMsg );
            Canvas.Release;
          end;
-             if g_boShowRedHPLable then actor.m_boOpenHealth:=True; //ÏÔÊ¾ÑªÌõ
-               if (actor.m_boOpenHealth or actor.m_noInstanceOpenHealth) and not actor.m_boDeath then begin
+               // Keep local visibility separate from the server reveal state.
+               // Actors have MaxHP = 0 until real health data arrives.
+               if (g_boShowRedHPLable or actor.m_boOpenHealth or actor.m_noInstanceOpenHealth) and
+                  (actor.m_Abil.MaxHP > 0) and not actor.m_boDeath then begin
                   if actor.m_noInstanceOpenHealth then
                      if GetTickCount - actor.m_dwOpenHealthStart > actor.m_dwOpenHealthTime then
                         actor.m_noInstanceOpenHealth := True;
@@ -314,7 +316,8 @@ begin
                   if d <> nil then begin
                      rc := d.ClientRect;
                      if actor.m_Abil.MaxHP > 0 then
-                        rc.Right := Round((rc.Right-rc.Left) / actor.m_Abil.MaxHP * actor.m_Abil.HP);
+                        rc.Right := rc.Left + Round((rc.Right-rc.Left) / actor.m_Abil.MaxHP *
+                           _MAX(0, _MIN(actor.m_Abil.HP, actor.m_Abil.MaxHP)));
                      MSurface.Draw (actor.m_nSayX - d.Width div 2, actor.m_nSayY - 10, rc, d, TRUE);
                   end;
                end;
