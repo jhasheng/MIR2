@@ -3361,12 +3361,23 @@ begin
     PlayObject.GameGoldChanged;
 end;
 
+function PlainScriptChatText(const Text: string): string;
+begin
+  // The installed scripts use rich-chat controls from a different engine.
+  // This client uses the message's protocol colors instead of inline styles.
+  Result := AnsiReplaceText(Text, '#6FFFF/8', '');
+  Result := AnsiReplaceText(Result, '#5', '');
+  Result := AnsiReplaceText(Result, '#6', '');
+  Result := AnsiReplaceText(Result, '#7', '');
+end;
+
 procedure TNormNpc.ActionOfLineMsg(PlayObject: TPlayObject;
   QuestActionInfo: pTQuestActionInfo);
 var
   sMsg: string;
 begin
-  sMsg := GetLineVariableText(PlayObject, QuestActionInfo.sParam2);
+  // Clean the script template before expanding player names or other values.
+  sMsg := GetLineVariableText(PlayObject, PlainScriptChatText(QuestActionInfo.sParam2));
   sMsg := AnsiReplaceText(sMsg, '%s', PlayObject.m_sCharName);
   sMsg := AnsiReplaceText(sMsg, '%d', m_sCharName);
   case QuestActionInfo.nParam1 of
