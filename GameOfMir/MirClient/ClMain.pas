@@ -1612,6 +1612,7 @@ procedure TfrmMain.AppOnIdle (Sender: TObject; var Done: Boolean);
 //procedure TFrmMain.DXTimerTimer(Sender: TObject; LagCount: Integer);
 var
    i, j: integer;
+   WindowDC: HDC;
    p: TPoint;
    DF: DDBLTFX;
    d: TDirectDrawSurface;
@@ -1713,7 +1714,25 @@ begin
    end;
 }
 
-   DxDraw.Primary.Draw (0, 0, DxDraw.Surface.ClientRect, DxDraw.Surface, FALSE);
+   if doFullScreen in DxDraw.Options then
+      DxDraw.Primary.Draw (0, 0, DxDraw.Surface.ClientRect, DxDraw.Surface, FALSE)
+   else begin
+      // Composite native edits before presenting, including their background pixels.
+      WindowDC := GetDCEx(DxDraw.Handle, 0, DCX_CACHE);
+      if WindowDC <> 0 then begin
+         try
+            for i := 0 to ControlCount - 1 do
+               if (Controls[i] is TCustomEdit) and Controls[i].Visible then
+                  TWinControl(Controls[i]).PaintTo(DxDraw.Surface.Canvas.Handle,
+                     Controls[i].Left - DxDraw.Left, Controls[i].Top - DxDraw.Top);
+            BitBlt(WindowDC, 0, 0, DxDraw.Surface.Width, DxDraw.Surface.Height,
+                   DxDraw.Surface.Canvas.Handle, 0, 0, SRCCOPY);
+         finally
+            DxDraw.Surface.Canvas.Release;
+            ReleaseDC(DxDraw.Handle, WindowDC);
+         end;
+      end;
+   end;
    if g_MySelf <> nil then begin
 
    end;
